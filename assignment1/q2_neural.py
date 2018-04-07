@@ -8,6 +8,16 @@ from q2_sigmoid import sigmoid, sigmoid_grad
 from q2_gradcheck import gradcheck_naive
 
 
+def crossentropy_softmax_grad(Y, softmax_theta):
+    """
+    Compute the gradient of the cross entropy of the softmax according to the input vector theta.
+    softmax_theta is the result of the softmax applied to theta.
+
+    Y is a one hot encoded vector.
+    """
+    return softmax_theta - Y
+
+
 def forward_backward_prop(X, labels, params, dimensions):
     """
     Forward and backward propagation for a two-layer sigmoidal network
@@ -39,35 +49,38 @@ def forward_backward_prop(X, labels, params, dimensions):
     b2 = np.reshape(params[ofs:ofs + Dy], (1, Dy))
 
     # Note: compute cost based on `sum` not `mean`.
-    l1 = np.dot(X, W1) + b1
-    z1 = sigmoid(l1)
+    z1 = np.dot(X, W1) + b1
+    # print("W1 (python): {}".format(W1))
+    # print("b1 (python): {}".format(b1))
+    # print("z1 (python): {}".format(z1))
+    l1 = sigmoid(z1)
 
-    l2 = np.dot(z1, W2) + b2
-    z2 = softmax(l2)
+    z2 = np.dot(l1, W2) + b2
+    l2 = softmax(z2)
 
-    def logloss(y, y_):
-        return -np.sum(y * np.log(y_))
-
-    cost = logloss(labels, z2)
+    print("Cost: {}".format(-np.sum(labels * np.log(l2), axis=1)))
+    cost = -np.sum(labels * np.log(l2))
 
     ### YOUR CODE HERE: backward propagation
-    grad = labels - z2
-    softmax_grad = grad * (1 - grad)
-    print("z1: {}, softmax_grad: {}, W2: {}, b2: {}".format(z1.shape, softmax_grad.shape, W2.shape, b2.shape))
+    softmax_grad = crossentropy_softmax_grad(labels, l2)
+    print("softmax_grad: {}".format(softmax_grad))
+    # print("z1: {}, softmax_grad: {}, W2: {}, b2: {}".format(z1.shape, softmax_grad.shape, W2.shape, b2.shape))
     gradW2 = np.dot(z1.T, softmax_grad)
     gradb2 = np.reshape(np.mean(softmax_grad, axis=0), b2.shape)
-    print("gradW2 {} gradb2 {}".format(gradW2.shape, gradb2.shape))
+    print("gradW2 (python): {}".format(gradW2))
+
+    # print("gradW2 {} gradb2 {}".format(gradW2.shape, gradb2.shape))
     assert gradW2.shape == W2.shape
     assert gradb2.shape == b2.shape
     # d y / d w1 = d z2 / d w1 = d z2 / d l2 * d l2 / d z1 * d z1 / d l1 * d l1 / d w1
     # softmax_grad * W2 * sigmoid_grad * X
     dy_dl2 = np.dot(softmax_grad, W2.T)
-    print("dy_dl2: {}".format(dy_dl2.shape))
+    # print("dy_dl2: {}".format(dy_dl2.shape))
 
     sig_grad = sigmoid_grad(dy_dl2)
     gradW1 = np.dot(X.T, sig_grad)
     gradb1 = np.reshape(np.mean(sig_grad, axis=0), b1.shape)
-    print("gradW1 {} gradb1 {}".format(gradW1.shape, gradb1.shape))
+    # print("gradW1 {} gradb1 {}".format(gradW1.shape, gradb1.shape))
     assert gradW1.shape == W1.shape
     assert gradb1.shape == b1.shape
     ### END YOUR CODE
@@ -108,11 +121,30 @@ def your_sanity_checks():
     your additional tests be graded.
     """
     print("Running your sanity checks...")
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    import h5py
+    import glob
+    sample_files = glob.glob("C:\\tmp\\sample*.h5")
+    for file in sample_files:
+        with h5py.File(file) as f:
+            data = f["Input"][...]
+            labels = f["Target"][...]
+            N = data.shape[1]
+            dimensions = [2, 3, 3]
+            l1Weights = f["L1Weights"][...]
+            l1Biases = f["L1Biases"][...]
+            l2Weights = f["L2Weights"][...]
+            l2Biases = f["L2Biases"][...]
+            loss = f["Loss"][...]
+            z1 = f["z1"][...]
+            l1 = f["l1"][...]
+            params = np.hstack([l1Weights.T.flatten(), l1Biases.flatten(), l2Weights.T.flatten(), l2Biases.flatten()])
+            print("gradW2 (wl): {}".format(f["GradientL2Weights"][...]))
+            print("loss: {}".format(loss))
+            cost, grad = forward_backward_prop(data, labels, params, dimensions)
+            print("cost: {}, should: {}".format(cost, np.sum(loss)))
+
 
 
 if __name__ == "__main__":
-    sanity_check()
+    # sanity_check()
     your_sanity_checks()
