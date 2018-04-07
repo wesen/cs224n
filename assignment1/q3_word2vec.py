@@ -55,18 +55,34 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     assignment!
     """
 
-    print("shapes: predicted: {}, outputVectors: {}".format(predicted.shape, outputVectors.shape))
-
     ### YOUR CODE HERE
-    smax = softmax(predicted)
-    ce_loss = -np.log(smax[target])
-    cost = np.sum(ce_loss)
-
-    gradPred = -outputVectors[target] + np.sum(np.dot(predicted, outputVectors.T))
-    grad = np.zeros(outputVectors.shape)
+    y_hat = softmax(np.dot(predicted, outputVectors.T))
+    cost = -np.log(y_hat[target])
+    grad = np.outer(y_hat, predicted)
+    grad[target] -= predicted
+    gradPred = -outputVectors[target] + np.sum(y_hat[:, None] * outputVectors, axis=0)
     ### END YOUR CODE
 
     return cost, gradPred, grad
+
+
+def test_softmaxCostAndGradient():
+    Ninner = 3
+    Nwords = 5
+    vc = np.random.rand(Ninner)
+    target = 1
+    outputVectors = np.random.rand(Ninner * Nwords).reshape((Nwords, Ninner))
+
+    def softmaxCostAndGradient_pred(vc, outputVectors):
+        cost, gradPred, grad = softmaxCostAndGradient(vc, target, outputVectors, None)
+        return cost, gradPred
+
+    def softmaxCostAndGradient_(vc, outputVectors):
+        cost, gradPred, grad = softmaxCostAndGradient(vc, target, outputVectors, None)
+        return cost, grad
+
+    gradcheck_naive(lambda outputVectors: softmaxCostAndGradient_(vc, outputVectors), outputVectors)
+    gradcheck_naive(lambda vc: softmaxCostAndGradient_pred(vc, outputVectors), vc)
 
 
 def getNegativeSamples(target, dataset, K):
@@ -140,13 +156,12 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     centerIndex = tokens[currentWord]
 
     print("shape: inputVectors: {}, outputVectors: {}".format(inputVectors.shape, outputVectors.shape))
-    predictions = inputVectors * outputVectors
-    print("shape: predictions: {}".format(predictions.shape))
 
     for word in contextWords:
         target = tokens[word]
         print("target: {}, dict: {}".format(target, tokens))
-        c_, gradPred_, grad_ = word2vecCostAndGradient(predicted=predictions, target=target,
+        c_, gradPred_, grad_ = word2vecCostAndGradient(predicted=inputVectors[centerIndex],
+                                                       target=target,
                                                        outputVectors=outputVectors, dataset=dataset)
         print("shape: gradPred: {}, grad: {}".format(gradPred_.shape, grad_.shape))
         cost += c_
@@ -262,5 +277,6 @@ def test_word2vec():
 
 
 if __name__ == "__main__":
-    test_normalize_rows()
-    test_word2vec()
+    # test_normalize_rows()
+    test_softmaxCostAndGradient()
+    # test_word2vec()
