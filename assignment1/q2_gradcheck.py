@@ -17,6 +17,7 @@ def gradcheck_naive(f, x):
     rndstate = random.getstate()
     random.setstate(rndstate)
     fx, grad = f(x)  # Evaluate function value at original point
+    # print("x {} grad {}".format(x, grad))
     h = 1e-4  # Do not change this!
 
     # Iterate over all indexes ix in x to check the gradient.
@@ -49,7 +50,7 @@ def gradcheck_naive(f, x):
         # print("shapes grad: {}".format(grad.shape))
 
         # Compare gradients
-        # print("ix: {}, numgrad: {}, grad: {}".format(ix, numgrad, grad))
+        # print("ix: {}, numgrad: {}, grad: {}, type: {}".format(ix, numgrad, grad, grad[ix]))
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))
         if reldiff > 1e-5:
             print("Gradient check failed.")

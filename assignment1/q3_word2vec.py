@@ -6,6 +6,7 @@ import numpy as np
 
 from q1_softmax import softmax
 from q2_gradcheck import gradcheck_naive
+from q2_sigmoid import sigmoid
 
 
 def normalizeRows(x):
@@ -81,7 +82,7 @@ def test_softmaxCostAndGradient():
         cost, gradPred, grad = softmaxCostAndGradient(vc, target, outputVectors, None)
         return cost, grad
 
-    gradcheck_naive(lambda outputVectors: softmaxCostAndGradient_(vc, outputVectors), outputVectors)
+    # gradcheck_naive(lambda outputVectors: softmaxCostAndGradient_(vc, outputVectors), outputVectors)
     gradcheck_naive(lambda vc: softmaxCostAndGradient_pred(vc, outputVectors), vc)
 
 
@@ -114,13 +115,57 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     # Sampling of indices is done for you. Do not modify this if you
     # wish to match the autograder and receive points!
     indices = [target]
-    indices.extend(getNegativeSamples(target, dataset, K))
+    negative_samples = getNegativeSamples(target, dataset, K)
+    indices.extend(negative_samples)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    negativeVectors = outputVectors[negative_samples]
+
+    sig_target = sigmoid(np.dot(outputVectors[target].T, predicted))
+    u_vc = np.sum(negativeVectors * predicted, axis=1)
+    sig_negative = sigmoid(-u_vc)
+    cost = - np.log(sig_target) - np.sum(np.log(sig_negative))
+
+    gradPred = -(1 - sig_target) * outputVectors[target] + np.sum((1. - sig_negative)[:, None] * negativeVectors,
+                                                                  axis=0)
+
+    grad = np.zeros(outputVectors.shape)
+
     ### END YOUR CODE
 
     return cost, gradPred, grad
+
+
+def test_negSampling():
+    dataset = type('dummy', (), {})()
+
+    def dummySampleTokenIdx():
+        return random.randint(0, 4)
+
+    def getRandomContext(C):
+        tokens = ["a", "b", "c", "d", "e"]
+        return tokens[random.randint(0, 4)], \
+               [tokens[random.randint(0, 4)] for i in range(2 * C)]
+
+    dataset.sampleTokenIdx = dummySampleTokenIdx
+    dataset.getRandomContext = getRandomContext
+
+    Ninner = 3
+    Nwords = 5
+    vc = np.random.rand(Ninner)
+    target = 1
+    outputVectors = np.random.rand(Ninner * Nwords).reshape((Nwords, Ninner))
+
+    def negSampling_pred(vc, outputVectors):
+        cost, gradPred, grad = negSamplingCostAndGradient(vc, target, outputVectors, dataset)
+        return cost, gradPred
+
+    def negSampling_(vc, outputVectors):
+        cost, gradPred, grad = negSamplingCostAndGradient(vc, target, outputVectors, dataset)
+        return cost, grad
+
+    # gradcheck_naive(lambda outputVectors: negSampling_(vc, outputVectors), outputVectors)
+    gradcheck_naive(lambda vc: negSampling_pred(vc, outputVectors), vc)
 
 
 def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
@@ -279,4 +324,5 @@ def test_word2vec():
 if __name__ == "__main__":
     # test_normalize_rows()
     test_softmaxCostAndGradient()
+    test_negSampling()
     # test_word2vec()
