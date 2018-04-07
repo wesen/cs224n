@@ -50,37 +50,25 @@ def forward_backward_prop(X, labels, params, dimensions):
 
     # Note: compute cost based on `sum` not `mean`.
     z1 = np.dot(X, W1) + b1
-    # print("W1 (python): {}".format(W1))
-    # print("b1 (python): {}".format(b1))
-    # print("z1 (python): {}".format(z1))
     l1 = sigmoid(z1)
 
     z2 = np.dot(l1, W2) + b2
     l2 = softmax(z2)
 
     cost = -np.sum(labels * np.log(l2))
-    print("Cost: {} ({})".format(-np.sum(labels * np.log(l2), axis=1), cost))
 
     ### YOUR CODE HERE: backward propagation
     softmax_grad = crossentropy_softmax_grad(labels, l2)
-    # print("softmax_grad: {}".format(softmax_grad))
-    print("shapes: z1: {}, softmax_grad: {}, W2: {}, b2: {}".format(z1.shape, softmax_grad.shape, W2.shape, b2.shape))
     gradW2 = np.dot(l1.T, softmax_grad)
-    gradb2 = np.reshape(np.mean(softmax_grad, axis=0), b2.shape)
-    # print("gradW2 (python): {}".format(gradW2))
+    gradb2 = np.reshape(np.sum(softmax_grad, axis=0), b2.shape)
 
-    print("shapes: gradW2 {} gradb2 {}".format(gradW2.shape, gradb2.shape))
     assert gradW2.shape == W2.shape
     assert gradb2.shape == b2.shape
-    # d y / d w1 = d z2 / d w1 = d z2 / d l2 * d l2 / d z1 * d z1 / d l1 * d l1 / d w1
-    # softmax_grad * W2 * sigmoid_grad * X
-    # print("dy_dl2: {}".format(dy_dl2.shape))
 
     sig_grad = sigmoid_grad(l1)
     dy_dz1 = sig_grad * np.dot(softmax_grad, W2.T)
     gradW1 = np.dot(X.T, dy_dz1)
-    gradb1 = np.reshape(np.mean(dy_dz1, axis=0), b1.shape)
-    # print("gradW1 {} gradb1 {}".format(gradW1.shape, gradb1.shape))
+    gradb1 = np.reshape(np.sum(dy_dz1, axis=0), b1.shape)
     assert gradW1.shape == W1.shape
     assert gradb1.shape == b1.shape
     ### END YOUR CODE
@@ -89,7 +77,7 @@ def forward_backward_prop(X, labels, params, dimensions):
     grad = np.concatenate((gradW1.flatten(), gradb1.flatten(),
                            gradW2.flatten(), gradb2.flatten()))
 
-    return cost, grad
+    return cost, grad.flatten()
 
 def softmax_ce_loss(X, Y):
     sX = softmax(X)
@@ -191,7 +179,7 @@ def your_sanity_checks():
     print("Running your sanity checks...")
 
     N = 2
-    dimensions = [3, 5, 2]
+    dimensions = [1, 1, 2]
     data = 10. * np.random.randn(N, dimensions[0])  # each row will be a datum
     data2 = 10. * np.random.randn(N, dimensions[1])  # each row will be a datum
     data3 = np.random.randn(N, dimensions[2]) /2. + .5  # each row will be a datum
@@ -200,16 +188,18 @@ def your_sanity_checks():
         labels[i, random.randint(0, dimensions[2] - 1)] = 1
 
     W2 = np.random.randn(dimensions[1] * dimensions[2])
+    b2 = np.random.randn(dimensions[2])
     W = np.random.randn(dimensions[0] * dimensions[1])
+    b1 = np.random.randn(dimensions[1])
 
-    # print("\nsoftmax_ce_loss\n")
-    # gradcheck_naive(lambda x: softmax_ce_loss(x, labels), data3)
-    # print("\nsoftmax_ce\n")
-    # gradcheck_naive(lambda x: ce_loss(x, labels), data3)
-    # print("\nsoftmax_ce_loss_w\n")
-    # gradcheck_naive(lambda params:
-    #                 softmax_ce_loss_w(data2, params, labels, dimensions), W2)
-    # print("\nsoftmax_ce_loss_w_sigmoid\n")
+    print("\nsoftmax_ce_loss\n")
+    gradcheck_naive(lambda x: softmax_ce_loss(x, labels), data3)
+    print("\nsoftmax_ce\n")
+    gradcheck_naive(lambda x: ce_loss(x, labels), data3)
+    print("\nsoftmax_ce_loss_w\n")
+    gradcheck_naive(lambda params:
+                    softmax_ce_loss_w(data2, params, labels, dimensions), W2)
+    print("\nsoftmax_ce_loss_w_sigmoid\n")
     gradcheck_naive(lambda x:
                     softmax_ce_loss_w_sigmoid(x, W2, labels, dimensions), data2)
     print("\nsoftmax_ce_loss_w_w2_sigmoid\n")

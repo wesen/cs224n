@@ -46,10 +46,10 @@ def gradcheck_naive(f, x):
 
         numgrad = (fx_1 - fx_2) / (2 * h)
 
-        print("shapes grad: {}".format(grad.shape))
+        # print("shapes grad: {}".format(grad.shape))
 
         # Compare gradients
-        print("ix: {}, numgrad: {}, grad: {}".format(ix, numgrad, grad[ix]))
+        # print("ix: {}, numgrad: {}, grad: {}".format(ix, numgrad, grad[ix]))
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))
         if reldiff > 1e-5:
             print("Gradient check failed.")
