@@ -126,11 +126,13 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     sig_negative = sigmoid(-u_vc)
     cost = - np.log(sig_target) - np.sum(np.log(sig_negative))
 
-    gradPred = -(1 - sig_target) * outputVectors[target] + np.sum((1. - sig_negative)[:, None] * negativeVectors,
-                                                                  axis=0)
-
+    gradPred = -(1 - sig_target) * outputVectors[target] \
+               + np.sum((1. - sig_negative)[:, None] * negativeVectors, axis=0)
     grad = np.zeros(outputVectors.shape)
-
+    grad[target] = - (1 - sig_target) * predicted
+    negative_grad = np.outer((1 - sig_negative), predicted)
+    for i, _grad in zip(negative_samples, negative_grad):
+        grad[i] += _grad
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -200,17 +202,16 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     contextIndices = [tokens[word] for word in contextWords]
     centerIndex = tokens[currentWord]
 
-    print("shape: inputVectors: {}, outputVectors: {}".format(inputVectors.shape, outputVectors.shape))
+    # print("shape: inputVectors: {}, outputVectors: {}".format(inputVectors.shape, outputVectors.shape))
 
     for word in contextWords:
         target = tokens[word]
-        print("target: {}, dict: {}".format(target, tokens))
+        # print("target: {}, dict: {}, contextWords: {}".format(target, tokens, contextWords))
         c_, gradPred_, grad_ = word2vecCostAndGradient(predicted=inputVectors[centerIndex],
                                                        target=target,
                                                        outputVectors=outputVectors, dataset=dataset)
-        print("shape: gradPred: {}, grad: {}".format(gradPred_.shape, grad_.shape))
         cost += c_
-        gradIn += gradPred_
+        gradIn[centerIndex] += gradPred_
         gradOut += grad_
 
     ### END YOUR CODE
@@ -270,7 +271,7 @@ def word2vec_sgd_wrapper(word2vecModel, tokens, wordVectors, dataset, C,
         grad[:int(N / 2), :] += gin / batchsize / denom
         grad[int(N / 2):, :] += gout / batchsize / denom
 
-    print("shapes: cost: {} grad {}".format(cost.shape, grad.shape))
+    # print("shapes: cost: {} grad {}".format(cost.shape, grad.shape))
     return cost, grad
 
 
@@ -323,6 +324,6 @@ def test_word2vec():
 
 if __name__ == "__main__":
     # test_normalize_rows()
-    test_softmaxCostAndGradient()
-    test_negSampling()
-    # test_word2vec()
+    # test_softmaxCostAndGradient()
+    # test_negSampling()
+    test_word2vec()
